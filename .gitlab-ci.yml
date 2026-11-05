@@ -125,7 +125,7 @@ tf-destroy-job:
     - terraform init
     - echo "✓ Initialization complete"
     - echo ""
-    - echo "WARNING: This will destroy all infrastructure!"
+    - echo "WARNING - This will destroy all infrastructure!"
     - echo "Destroying terraform configuration..."
     - terraform destroy -auto-approve
     - echo "✓ Destroy complete"
