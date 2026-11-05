@@ -1,0 +1,48 @@
+# Example variables for team-alpha-compute
+# Copy to terraform.tfvars and customize for your environment
+
+# Application name (used in resource naming)
+app_name = "team-alpha"
+
+# AMI name prefix to search for (from team-alpha-infra)
+ami_name_prefix = "team-alpha-web-server-"
+
+# EC2 instance type
+instance_type = "t3.micro"
+
+# Number of instances to launch
+instance_count = 1
+
+# Allocate elastic IPs for static addressing
+allocate_elastic_ips = true
+
+# CIDR blocks allowed HTTP/HTTPS access
+allowed_http_cidrs = ["0.0.0.0/0"]
+
+# CIDR blocks allowed SSH access (restrict this in production!)
+allowed_ssh_cidrs = ["YOUR_IP/32"]
+
+# Environment
+environment = "development"
+
+# Enable CloudWatch monitoring
+enable_monitoring = true
+
+# Encrypt EBS volumes
+encrypt_ebs = true
+
+# Root volume size
+root_volume_size = 20
+
+# Common tags for all resources
+common_tags = {
+  Terraform   = "true"
+  Project     = "team-alpha"
+  Environment = "development"
+  ManagedBy   = "Terraform"
+  Team        = "platform"
+  CostCenter  = "engineering"
+}
+
+# AWS region
+aws_region = "eu-west-2"
