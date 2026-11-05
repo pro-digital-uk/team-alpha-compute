@@ -1,0 +1,135 @@
+stages:
+  - version
+  - validate
+  - plan
+  - apply
+  - destroy
+
+variables:
+  TF_VERSION: "1.5.0"
+  TF_ROOT: "${CI_PROJECT_DIR}"
+  AWS_DEFAULT_REGION: "eu-west-2"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+image: alpine:latest
+
+before_script:
+  - apk add --no-cache curl unzip bash git
+  - |
+    if [ ! -f /usr/local/bin/terraform ]; then
+      curl -fsSL "https://releases.hashicorp.com/terraform/${TF_VERSION}/terraform_${TF_VERSION}_linux_amd64.zip" -o /tmp/tf.zip
+      unzip -o /tmp/tf.zip -d /usr/local/bin
+      rm -f /tmp/tf.zip
+    fi
+  - terraform version
+
+# ============================================================================
+# Version Stage - Verify tools are installed
+# ============================================================================
+
+version-job:
+  stage: version
+  script:
+    - echo "Terraform version:"
+    - terraform version
+    - echo "Git version:"
+    - git --version
+    - echo "AWS CLI version (if available):"
+    - aws --version || echo "AWS CLI not installed"
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ============================================================================
+# Validate Stage - Check Terraform syntax
+# ============================================================================
+
+tf-validate-job:
+  stage: validate
+  script:
+    - echo "Formatting check..."
+    - terraform fmt -check -recursive
+    - echo "✓ Format check passed"
+    - echo ""
+    - echo "Running terraform validate..."
+    - terraform validate
+    - echo "✓ Validation passed"
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ============================================================================
+# Plan Stage - Show what changes will be made
+# ============================================================================
+
+tf-plan-job:
+  stage: plan
+  script:
+    - echo "Initializing Terraform..."
+    - terraform init
+    - echo "✓ Initialization complete"
+    - echo ""
+    - echo "Running terraform plan..."
+    - terraform plan -out=tfplan
+    - echo "✓ Plan complete"
+  artifacts:
+    paths:
+      - tfplan
+      - .terraform/
+    expire_in: 1 week
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ============================================================================
+# Apply Stage - Deploy infrastructure (manual trigger on main)
+# ============================================================================
+
+tf-apply-job:
+  stage: apply
+  environment: production
+  script:
+    - echo "Initializing Terraform..."
+    - terraform init
+    - echo "✓ Initialization complete"
+    - echo ""
+    - echo "Applying terraform configuration..."
+    - terraform apply -auto-approve tfplan
+    - echo "✓ Apply complete"
+    - echo ""
+    - echo "=== Deployment Summary ==="
+    - terraform output -json
+  artifacts:
+    paths:
+      - .terraform/
+    expire_in: 1 week
+  when: manual
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+      when: never
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  allow_failure: false
+
+# ============================================================================
+# Destroy Stage - Tear down infrastructure (manual trigger on main)
+# ============================================================================
+
+tf-destroy-job:
+  stage: destroy
+  environment: production
+  script:
+    - echo "Initializing Terraform..."
+    - terraform init
+    - echo "✓ Initialization complete"
+    - echo ""
+    - echo "WARNING: This will destroy all infrastructure!"
+    - echo "Destroying terraform configuration..."
+    - terraform destroy -auto-approve
+    - echo "✓ Destroy complete"
+  when: manual
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+  allow_failure: false
