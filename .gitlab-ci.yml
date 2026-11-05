@@ -1,5 +1,6 @@
 stages:
   - version
+  - initialize
   - validate
   - plan
   - apply
@@ -42,11 +43,35 @@ version-job:
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 # ============================================================================
+# Initialize Stage - Download Terraform plugins and prepare workspace
+# ============================================================================
+
+tf-init-job:
+  stage: initialize
+  script:
+    - echo "Initializing Terraform workspace..."
+    - terraform init
+    - echo "✓ Terraform initialized"
+    - echo ""
+    - echo "Backend configuration:"
+    - terraform version
+  artifacts:
+    paths:
+      - .terraform/
+      - .terraform.lock.hcl
+    expire_in: 1 day
+  rules:
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+  allow_failure: false
+
+# ============================================================================
 # Validate Stage - Check Terraform syntax
 # ============================================================================
 
 tf-validate-job:
   stage: validate
+  dependencies:
+    - tf-init-job
   script:
     - echo "Formatting check..."
     - terraform fmt -check -recursive
@@ -65,6 +90,8 @@ tf-validate-job:
 
 tf-plan-job:
   stage: plan
+  dependencies:
+    - tf-init-job
   script:
     - echo "Initializing Terraform..."
     - terraform init
