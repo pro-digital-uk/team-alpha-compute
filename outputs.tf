@@ -51,12 +51,12 @@ output "instance_details" {
   description = "Detailed information about instances"
   value = [
     for i, instance in aws_instance.web_server : {
-      instance_id   = instance.id
-      instance_type = instance.instance_type
-      private_ip    = instance.private_ip
-      public_ip     = instance.public_ip
+      instance_id       = instance.id
+      instance_type     = instance.instance_type
+      private_ip        = instance.private_ip
+      public_ip         = instance.public_ip
       availability_zone = instance.availability_zone
-      elastic_ip    = var.allocate_elastic_ips ? aws_eip.web_server[i].public_ip : null
+      elastic_ip        = var.allocate_elastic_ips ? aws_eip.web_server[i].public_ip : null
     }
   ]
 }
@@ -65,7 +65,7 @@ output "web_server_urls" {
   description = "URLs to access the web servers"
   value = var.allocate_elastic_ips ? [
     for eip in aws_eip.web_server : "http://${eip.public_ip}"
-  ] : [
+    ] : [
     for instance in aws_instance.web_server : "http://${instance.public_ip}"
   ]
 }

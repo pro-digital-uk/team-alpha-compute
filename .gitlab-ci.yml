@@ -1,5 +1,6 @@
 stages:
   - version
+  - initialize
   - validate
   - plan
   - apply
@@ -38,8 +39,32 @@ version-job:
     - echo "AWS CLI version (if available):"
     - aws --version || echo "AWS CLI not installed"
   rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# ============================================================================
+# Initialize Stage - Download Terraform plugins and prepare workspace
+# ============================================================================
+
+tf-init-job:
+  stage: initialize
+  script:
+    - echo "Initializing Terraform workspace..."
+    - terraform init
+    - echo "✓ Terraform initialized"
+    - echo ""
+    - echo "Backend configuration:"
+    - terraform version
+  artifacts:
+    paths:
+      - .terraform/
+      - .terraform.lock.hcl
+    expire_in: 1 day
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH =~ /^feature\//
+  allow_failure: false
 
 # ============================================================================
 # Validate Stage - Check Terraform syntax
@@ -47,6 +72,8 @@ version-job:
 
 tf-validate-job:
   stage: validate
+  dependencies:
+    - tf-init-job
   script:
     - echo "Formatting check..."
     - terraform fmt -check -recursive
@@ -56,6 +83,7 @@ tf-validate-job:
     - terraform validate
     - echo "✓ Validation passed"
   rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
@@ -65,6 +93,8 @@ tf-validate-job:
 
 tf-plan-job:
   stage: plan
+  dependencies:
+    - tf-init-job
   script:
     - echo "Initializing Terraform..."
     - terraform init
@@ -81,6 +111,7 @@ tf-plan-job:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
       when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     - if: $CI_COMMIT_BRANCH =~ /^feature\//
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
@@ -110,6 +141,8 @@ tf-apply-job:
   rules:
     - if: $CI_PIPELINE_SOURCE == "schedule"
       when: never
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   allow_failure: false
 
@@ -125,11 +158,13 @@ tf-destroy-job:
     - terraform init
     - echo "✓ Initialization complete"
     - echo ""
-    - echo "WARNING: This will destroy all infrastructure!"
+    - echo "WARNING - This will destroy all infrastructure!"
     - echo "Destroying terraform configuration..."
     - terraform destroy -auto-approve
     - echo "✓ Destroy complete"
   when: manual
   rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      when: never
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
   allow_failure: false
