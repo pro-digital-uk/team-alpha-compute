@@ -16,7 +16,7 @@
 # This looks for AMIs named "team-alpha-web-server-*" in your account
 data "aws_ami" "web_server" {
   most_recent = true
-  owners      = ["self"]  # Your AWS account only
+  owners      = ["self"] # Your AWS account only
 
   filter {
     name   = "name"
@@ -107,12 +107,12 @@ resource "aws_security_group_rule" "web_server_egress" {
 
 # Launch EC2 instances
 resource "aws_instance" "web_server" {
-  count                = var.instance_count
-  ami                  = data.aws_ami.web_server.id
-  instance_type        = var.instance_type
-  subnet_id            = data.aws_subnets.default.ids[count.index % length(data.aws_subnets.default.ids)]
+  count                  = var.instance_count
+  ami                    = data.aws_ami.web_server.id
+  instance_type          = var.instance_type
+  subnet_id              = data.aws_subnets.default.ids[count.index % length(data.aws_subnets.default.ids)]
   vpc_security_group_ids = [aws_security_group.web_server.id]
-  iam_instance_profile = var.iam_instance_profile != null ? var.iam_instance_profile : null
+  iam_instance_profile   = var.iam_instance_profile != null ? var.iam_instance_profile : null
 
   # User data is optional (AMI already has Nginx running)
   # Can be used for additional configuration
@@ -132,7 +132,7 @@ resource "aws_instance" "web_server" {
 
   # Encrypt root volume
   root_block_device {
-    encrypted = var.encrypt_ebs
+    encrypted   = var.encrypt_ebs
     volume_size = var.root_volume_size
     volume_type = "gp3"
 
