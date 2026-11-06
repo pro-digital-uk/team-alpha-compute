@@ -15,6 +15,9 @@ variables:
 
 image: ubuntu:latest
 
+tags:
+  - mupando-ec2-runner
+
 before_script:
   - apt-get update && apt-get install -y curl unzip bash git
   - |
